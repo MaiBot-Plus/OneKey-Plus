@@ -220,14 +220,16 @@ class MaiBotManager:
                     cwd=cwd, 
                     capture_output=not show_output,
                     text=True,
-                    encoding='utf-8'
+                    encoding='utf-8',
+                    errors='ignore'  # 忽略编码错误
                 )
             else:
                 result = subprocess.run(
                     cmd,
                     capture_output=not show_output,
                     text=True,
-                    encoding='utf-8'
+                    encoding='utf-8',
+                    errors='ignore'  # 忽略编码错误
                 )
             return result.returncode == 0, result.stdout if not show_output else ""
         except Exception as e:
@@ -244,7 +246,8 @@ class MaiBotManager:
                     env=env,
                     capture_output=not show_output,
                     text=True,
-                    encoding='utf-8'
+                    encoding='utf-8',
+                    errors='ignore'  # 忽略编码错误
                 )
             else:
                 result = subprocess.run(
@@ -252,7 +255,8 @@ class MaiBotManager:
                     env=env,
                     capture_output=not show_output,
                     text=True,
-                    encoding='utf-8'
+                    encoding='utf-8',
+                    errors='ignore'  # 忽略编码错误
                 )
             
             # 返回成功状态和详细信息（包括stdout和stderr）
@@ -552,7 +556,8 @@ class MaiBotManager:
                 cwd=repo_path,
                 capture_output=True,
                 text=True,
-                encoding='utf-8'
+                encoding='utf-8',
+                errors='ignore'  # 忽略编码错误
             )
             return result.stdout.strip() if result.returncode == 0 else None
         except:
@@ -566,7 +571,8 @@ class MaiBotManager:
                 cwd=repo_path,
                 capture_output=True,
                 text=True,
-                encoding='utf-8'
+                encoding='utf-8',
+                errors='ignore'  # 忽略编码错误
             )
         except:
             pass
@@ -580,7 +586,8 @@ class MaiBotManager:
                     cwd=repo_path,
                     capture_output=True,
                     text=True,
-                    encoding='utf-8'
+                    encoding='utf-8',
+                    errors='ignore'  # 忽略编码错误
                 )
             else:
                 subprocess.run(
@@ -588,7 +595,8 @@ class MaiBotManager:
                     cwd=repo_path,
                     capture_output=True,
                     text=True,
-                    encoding='utf-8'
+                    encoding='utf-8',
+                    errors='ignore'  # 忽略编码错误
                 )
         except:
             pass
@@ -681,7 +689,7 @@ class MaiBotManager:
             print(Colors.blue("正在获取远程仓库更新..."))
             fetch_result = subprocess.run(
                 ["git", "fetch", "origin"], 
-                capture_output=True, text=True, encoding='utf-8', env=env
+                capture_output=True, text=True, encoding='utf-8', errors='ignore', env=env
             )
             
             if fetch_result.returncode != 0:
@@ -691,14 +699,14 @@ class MaiBotManager:
             # 获取当前分支
             branch_result = subprocess.run(
                 ["git", "branch", "--show-current"], 
-                capture_output=True, text=True, encoding='utf-8', env=env
+                capture_output=True, text=True, encoding='utf-8', errors='ignore', env=env
             )
             current_branch = branch_result.stdout.strip() or "master"
             
             # 检查本地与远程的差异
             log_result = subprocess.run(
                 ["git", "log", f"HEAD..origin/{current_branch}", "--oneline"], 
-                capture_output=True, text=True, encoding='utf-8', env=env
+                capture_output=True, text=True, encoding='utf-8', errors='ignore', env=env
             )
             
             if log_result.returncode != 0:
@@ -733,7 +741,7 @@ class MaiBotManager:
                 
                 detail_result = subprocess.run(
                     ["git", "log", f"HEAD..origin/{current_branch}", "--pretty=format:%h - %an, %ar : %s", "-10"], 
-                    capture_output=True, text=True, encoding='utf-8', env=env
+                    capture_output=True, text=True, encoding='utf-8', errors='ignore', env=env
                 )
                 
                 if detail_result.returncode == 0 and detail_result.stdout.strip():
@@ -763,7 +771,7 @@ class MaiBotManager:
         # Python版本
         try:
             result = subprocess.run([str(self.venv_python), '--version'], 
-                                  capture_output=True, text=True)
+                                  capture_output=True, text=True, encoding='utf-8', errors='ignore')
             python_version = result.stdout.strip()
             print(f"  Python版本: {Colors.green(python_version)}")
         except:
