@@ -124,14 +124,14 @@ class MaiBotManager:
         print(Colors.bold("主菜单："))
         print()
         print(Colors.green("快捷启动服务管理："))
-        print("  1. 启动 MaiBot 主程序")
-        print("  2. 启动 Napcat Adapter")
-        print("  3. 启动 Matcha Adapter")
+        print("  1. 启动服务组合 →")
+        print("  2. 启动 MaiBot 主程序")
+        print("  3. 启动 Napcat Adapter")
         print("  4. 启动 Napcat 服务")
-        print("  5. 启动 Matcha 程序")
-        print("  6. 启动服务组合 →")
+        print("  5. 启动 Matcha Adapter")
+        print("  6. 启动 Matcha 程序")
         print("  7. 查看运行状态")
-        print("  8. 停止所有服务")
+        print("  8. 启动数据库管理程序")
         print()
         print(Colors.blue("更新管理："))
         print("  9. 更新 Bot 仓库")
@@ -220,14 +220,16 @@ class MaiBotManager:
                     cwd=cwd, 
                     capture_output=not show_output,
                     text=True,
-                    encoding='utf-8'
+                    encoding='utf-8',
+                    errors='ignore'  # 忽略编码错误
                 )
             else:
                 result = subprocess.run(
                     cmd,
                     capture_output=not show_output,
                     text=True,
-                    encoding='utf-8'
+                    encoding='utf-8',
+                    errors='ignore'  # 忽略编码错误
                 )
             return result.returncode == 0, result.stdout if not show_output else ""
         except Exception as e:
@@ -244,7 +246,8 @@ class MaiBotManager:
                     env=env,
                     capture_output=not show_output,
                     text=True,
-                    encoding='utf-8'
+                    encoding='utf-8',
+                    errors='ignore'  # 忽略编码错误
                 )
             else:
                 result = subprocess.run(
@@ -252,7 +255,8 @@ class MaiBotManager:
                     env=env,
                     capture_output=not show_output,
                     text=True,
-                    encoding='utf-8'
+                    encoding='utf-8',
+                    errors='ignore'  # 忽略编码错误
                 )
             
             # 返回成功状态和详细信息（包括stdout和stderr）
@@ -386,6 +390,34 @@ class MaiBotManager:
             print(Colors.cyan("提示：服务运行在独立的PowerShell窗口中"))
             print(Colors.cyan("关闭对应窗口即可停止服务"))
         print()
+    
+    def start_sqlite_studio(self):
+        """启动SQLiteStudio数据库管理程序"""
+        sqlite_studio_path = self.base_path / "SQLiteStudio" / "SQLiteStudio.exe"
+        
+        if not sqlite_studio_path.exists():
+            print(Colors.red(f"❌ SQLiteStudio未找到: {sqlite_studio_path}"))
+            return False
+        
+        try:
+            print(Colors.blue("正在启动SQLiteStudio数据库管理程序..."))
+            
+            # 使用subprocess.Popen启动程序，不等待程序结束
+            process = subprocess.Popen(
+                [str(sqlite_studio_path)],
+                cwd=str(sqlite_studio_path.parent),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+            )
+            
+            print(Colors.green("✅ SQLiteStudio数据库管理程序已启动"))
+            print(Colors.cyan("数据库文件位置：Bot/data/MaiBot.db"))
+            return True
+            
+        except Exception as e:
+            print(Colors.red(f"❌ 启动SQLiteStudio失败: {e}"))
+            return False
     
     def update_repository(self, service_key: str):
         """更新仓库"""
@@ -552,7 +584,8 @@ class MaiBotManager:
                 cwd=repo_path,
                 capture_output=True,
                 text=True,
-                encoding='utf-8'
+                encoding='utf-8',
+                errors='ignore'  # 忽略编码错误
             )
             return result.stdout.strip() if result.returncode == 0 else None
         except:
@@ -566,7 +599,8 @@ class MaiBotManager:
                 cwd=repo_path,
                 capture_output=True,
                 text=True,
-                encoding='utf-8'
+                encoding='utf-8',
+                errors='ignore'  # 忽略编码错误
             )
         except:
             pass
@@ -580,7 +614,8 @@ class MaiBotManager:
                     cwd=repo_path,
                     capture_output=True,
                     text=True,
-                    encoding='utf-8'
+                    encoding='utf-8',
+                    errors='ignore'  # 忽略编码错误
                 )
             else:
                 subprocess.run(
@@ -588,7 +623,8 @@ class MaiBotManager:
                     cwd=repo_path,
                     capture_output=True,
                     text=True,
-                    encoding='utf-8'
+                    encoding='utf-8',
+                    errors='ignore'  # 忽略编码错误
                 )
         except:
             pass
@@ -645,7 +681,7 @@ class MaiBotManager:
         print(Colors.green("依赖安装检查完成"))
     
     def check_repository_status(self, service_key):
-        """检查指定仓库的commit状态"""
+        """检查指定仓库的commit状态（支持Token认证）"""
         if service_key not in self.services:
             print(Colors.red(f"未找到服务: {service_key}"))
             return
@@ -666,6 +702,9 @@ class MaiBotManager:
         print(f"路径: {Colors.cyan(str(repo_path))}")
         print()
         
+        # 获取GitHub Token
+        github_token = self._get_github_token()
+        
         try:
             # 切换到仓库目录
             original_cwd = os.getcwd()
@@ -676,29 +715,75 @@ class MaiBotManager:
             env['GIT_TERMINAL_PROMPT'] = '0'  # 禁用终端提示
             env['GIT_ASKPASS'] = 'echo'       # 禁用密码提示
             env['SSH_ASKPASS'] = 'echo'       # 禁用SSH密码提示
+            env['GCM_INTERACTIVE'] = 'never'  # 禁用Git Credential Manager
+            
+            # 如果有token，先设置认证URL
+            original_url = None
+            if github_token:
+                print(Colors.blue("使用Token认证获取远程仓库更新..."))
+                
+                # 获取原始URL
+                get_url_result = subprocess.run(
+                    ["git", "remote", "get-url", "origin"], 
+                    capture_output=True, text=True, encoding='utf-8', errors='ignore', env=env
+                )
+                
+                if get_url_result.returncode == 0:
+                    original_url = get_url_result.stdout.strip()
+                    
+                    # 构造带token的URL
+                    if original_url.startswith("https://github.com/"):
+                        auth_url = original_url.replace("https://github.com/", f"https://{github_token}@github.com/")
+                        
+                        # 临时设置认证URL
+                        set_url_result = subprocess.run(
+                            ["git", "remote", "set-url", "origin", auth_url], 
+                            capture_output=True, text=True, encoding='utf-8', errors='ignore', env=env
+                        )
+                        
+                        if set_url_result.returncode != 0:
+                            print(Colors.yellow("设置认证URL失败，使用普通方式检查"))
+                            github_token = None
+            else:
+                print(Colors.blue("正在获取远程仓库更新..."))
             
             # 获取远程更新
-            print(Colors.blue("正在获取远程仓库更新..."))
             fetch_result = subprocess.run(
                 ["git", "fetch", "origin"], 
-                capture_output=True, text=True, encoding='utf-8', env=env
+                capture_output=True, text=True, encoding='utf-8', errors='ignore', env=env
             )
+            
+            # 恢复原始URL（如果使用了token）
+            if github_token and original_url:
+                subprocess.run(
+                    ["git", "remote", "set-url", "origin", original_url], 
+                    capture_output=True, text=True, encoding='utf-8', errors='ignore', env=env
+                )
             
             if fetch_result.returncode != 0:
                 print(Colors.red(f"获取远程更新失败: {fetch_result.stderr}"))
+                if github_token:
+                    print(Colors.yellow("提示：Token认证获取失败，可能是网络问题或Token权限不足"))
+                else:
+                    print(Colors.yellow("提示：未使用Token认证，可能因为网络限制导致失败"))
                 return
+            else:
+                if github_token:
+                    print(Colors.green("✅ 使用Token认证成功获取远程更新"))
+                else:
+                    print(Colors.green("✅ 成功获取远程更新"))
             
             # 获取当前分支
             branch_result = subprocess.run(
                 ["git", "branch", "--show-current"], 
-                capture_output=True, text=True, encoding='utf-8', env=env
+                capture_output=True, text=True, encoding='utf-8', errors='ignore', env=env
             )
             current_branch = branch_result.stdout.strip() or "master"
             
             # 检查本地与远程的差异
             log_result = subprocess.run(
                 ["git", "log", f"HEAD..origin/{current_branch}", "--oneline"], 
-                capture_output=True, text=True, encoding='utf-8', env=env
+                capture_output=True, text=True, encoding='utf-8', errors='ignore', env=env
             )
             
             if log_result.returncode != 0:
@@ -733,7 +818,7 @@ class MaiBotManager:
                 
                 detail_result = subprocess.run(
                     ["git", "log", f"HEAD..origin/{current_branch}", "--pretty=format:%h - %an, %ar : %s", "-10"], 
-                    capture_output=True, text=True, encoding='utf-8', env=env
+                    capture_output=True, text=True, encoding='utf-8', errors='ignore', env=env
                 )
                 
                 if detail_result.returncode == 0 and detail_result.stdout.strip():
@@ -763,7 +848,7 @@ class MaiBotManager:
         # Python版本
         try:
             result = subprocess.run([str(self.venv_python), '--version'], 
-                                  capture_output=True, text=True)
+                                  capture_output=True, text=True, encoding='utf-8', errors='ignore')
             python_version = result.stdout.strip()
             print(f"  Python版本: {Colors.green(python_version)}")
         except:
@@ -870,25 +955,24 @@ class MaiBotManager:
                     choice = input(Colors.bold("请选择操作 (0-18): ")).strip()
                     
                     if choice == '0':
-                        self.stop_all_services()
                         print(Colors.green("程序退出，感谢使用！"))
                         break
                     elif choice == '1':
-                        self.start_service('bot')
+                        self.start_service_group()
                     elif choice == '2':
-                        self.start_service('adapter')
+                        self.start_service('bot')
                     elif choice == '3':
-                        self.start_service('matcha_adapter')
+                        self.start_service('adapter')
                     elif choice == '4':
                         self.start_service('napcat')
                     elif choice == '5':
-                        self.start_service('matcha')
+                        self.start_service('matcha_adapter')
                     elif choice == '6':
-                        self.start_service_group()
+                        self.start_service('matcha')
                     elif choice == '7':
                         self.show_status()
                     elif choice == '8':
-                        self.stop_all_services()
+                        self.start_sqlite_studio()
                     elif choice == '9':
                         self.update_repository('bot')
                     elif choice == '10':
