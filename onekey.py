@@ -665,7 +665,7 @@ class MaiBotManager:
                             else -1
                         )
 
-                        print(Colors.red(f"Token认证更新失败"))
+                        print(Colors.red("Token认证更新失败"))
                         print(Colors.yellow("详细错误信息:"))
                         print(Colors.yellow(f"  返回码: {returncode}"))
                         if stdout.strip():
