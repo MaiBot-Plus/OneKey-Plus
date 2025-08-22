@@ -9,6 +9,10 @@ echo "      MaiBot-Plus 一键启动程序"
 echo "========================================"
 echo
 
+# 切换到脚本所在目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 # 检测是否在临时目录中运行
 CURRENT_PATH="$(pwd)"
 IN_ARCHIVE=0
@@ -17,29 +21,18 @@ if echo "$CURRENT_PATH" | grep -qi "temp"; then
     IN_ARCHIVE=1
 elif echo "$CURRENT_PATH" | grep -qi "tmp"; then
     IN_ARCHIVE=1
-elif echo "$CURRENT_PATH" | grep -qi "\.tar"; then
-    IN_ARCHIVE=1
-elif echo "$CURRENT_PATH" | grep -qi "\.zip"; then
-    IN_ARCHIVE=1
-elif echo "$CURRENT_PATH" | grep -qi "\.gz"; then
-    IN_ARCHIVE=1
 fi
 
 if [ "$IN_ARCHIVE" -eq 1 ]; then
-    echo "❌ 检测到在压缩包中运行！"
+    echo "❌ 检测到在临时目录中运行！"
     echo
     echo "请先解压缩文件到本地目录再运行此脚本"
     echo
-    read -n 1 -s
+    read -p "按任意键退出..."
     exit 1
 fi
 
-# 保存当前目录并切换到脚本目录
-CURRENT_DIR="$(pwd)"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
-
-# 检查是否在正确的MaiBot-Plus目录中
+# 检查关键文件是否存在
 if [ ! -f "onekey_linux.py" ]; then
     echo "❌ 错误：未找到onekey_linux.py文件！"
     echo
